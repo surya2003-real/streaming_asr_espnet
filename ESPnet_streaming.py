@@ -68,3 +68,4 @@ while curr_time<audio_len:
     word_list = txt.split()
     conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
     transcription += " ".join(temp)
+    print(transcription)
