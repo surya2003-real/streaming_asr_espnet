@@ -4,7 +4,7 @@ import librosa
 from functools import lru_cache
 import time
 import argparse
-from espnet2.bin.asr_inference_streaming import Speech2Text
+from espnet2.bin.asr_inference import Speech2Text
 
 buffer = []
 transcription = ""
