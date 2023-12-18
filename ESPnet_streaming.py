@@ -5,6 +5,7 @@ from functools import lru_cache
 import time
 import argparse
 from espnet2.bin.asr_inference import Speech2Text
+from new_conf_words import new_conf_words
 
 buffer = []
 transcription = ""
@@ -31,7 +32,8 @@ def initial_audio(model,audio):
     return text
 
 def transcribe(model,audio):
-    return model(audio)[0][0]
+    nbest = model(audio)
+    return nbest[0][0]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('audio_path', type=str, help="Filename of 16kHz mono channel wav, on which live streaming is simulated.")
@@ -47,11 +49,22 @@ audio_path = args.audio_path
 speech2text = Speech2Text(args.asr_train_config,args.asr_model_file,device=args.device)
 
 SAMPLING_RATE = 16000
-duration = len(load_audio(audio_path))/SAMPLING_RATE
+audio_len = len(load_audio(audio_path))
+duration = audio_len/SAMPLING_RATE
 print("Audio duration is: %2.2f seconds" % duration, file=logfile)
 
+curr_time=0
 for i in range(0,3):
     a = load_audio_chunk(audio_path,i,i+1)
-    t=initial_audio(speech2text,a)
-    transcription += t
-    conf_words.append(t)
+    txt = initial_audio(speech2text,a)
+    transcription += txt
+    conf_words.append(txt)
+
+curr_time = 1
+while curr_time<audio_len:
+    a = load_audio_chunk(audio_path,curr_time,curr_time+3)
+    txt = initial_audio(speech2text,a)
+    curr_time += 1
+    word_list = txt.split()
+    conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
+    transcription += " ".join(temp)
