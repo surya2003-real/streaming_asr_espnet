@@ -52,15 +52,21 @@ SAMPLING_RATE = 16000
 audio_len = len(load_audio(audio_path))
 duration = audio_len/SAMPLING_RATE
 print("Audio duration is: %2.2f seconds" % duration, file=logfile)
-start_time = time.time()
+initial_time = time.time()
 curr_time=0
+second_count = 0
 for i in range(0,3):
     start_time = time.time()
     a = load_audio_chunk(audio_path,i,i+1)
     txt = initial_audio(speech2text,a)
     transcription += " "+txt
     conf_words.append(txt)
-    print(transcription, time.time()-start_time)
+    print(transcription, time.time()-start_time)    
+    second_count += 1
+    delay = second_count - (time.time() - initial_time)
+    if delay > 0:
+        time.sleep(delay)
+    print(second_count)
 
 curr_time = 1
 while curr_time<duration:
@@ -72,9 +78,11 @@ while curr_time<duration:
     conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
     transcription += " "+" ".join(temp)
     print(curr_time-1, min(curr_time+2, duration), transcription, time.time()-start_time)
-    delay = 1 - (time.time() - start_time)
+    second_count+=1
+    delay = second_count - (time.time() - initial_time)
     if delay > 0:
         time.sleep(delay)
+    print(second_count)
 
 
 
