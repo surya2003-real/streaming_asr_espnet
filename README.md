@@ -31,6 +31,7 @@ The `new_conf_words` function is designed to update the `conf_words` list based 
 The function returns two lists:
 - `conf_words`: Updated list of confirmed words.
 - `buffer`: Remaining elements in the buffer after processing.
+- `transcript_addition`: new words to be added in the transcript
 
 ### Functionality
 The function first uses the `conf_word_check` function to find the index `k` where the sequences `conf_words` and `word_list` match. It then updates the `conf_words` list by appending elements from the `buffer` until a mismatch is encountered or the buffer is exhausted. The remaining elements in the buffer after processing are returned.
