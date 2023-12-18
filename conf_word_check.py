@@ -1,7 +1,7 @@
 def conf_word_check(conf_words, word_list):
     k=0
     i=0
-    while(i < len(conf_words)):
+    while(i < len(conf_words) and k < len(word_list)):
         if(conf_words[i]==word_list[k]):
             flag=1
             temp1=i
@@ -18,7 +18,7 @@ def conf_word_check(conf_words, word_list):
         i+=1
     return k
 
-conf_words=['a','b','c','d','e','f','g','h','i','j','k','l','m','n']
-word_list=['k','l','m','n', 'o', 'p', 'q', 'r', 's']
-print(conf_word_check(conf_words, word_list), word_list[conf_word_check(conf_words, word_list)])
+# conf_words=['a','b','c','d','e','f','g','h','i','j','k','l','m','n']
+# word_list=['k','l','m','n', 'o', 'p', 'q', 'r', 's']
+# print(conf_word_check(conf_words, word_list), word_list[conf_word_check(conf_words, word_list)])
     

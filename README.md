@@ -18,13 +18,19 @@ The function returns an integer value, `k`.
 ### Functionality
 The function compares the elements of `conf_words` and `word_list` to find the index `k` where the two sequences match. It iterates through the elements of `conf_words` and checks for matches with the corresponding elements in `word_list`. If a match is found, it continues checking the subsequent elements in both sequences until a mismatch is encountered or one of the sequences reaches its end.
 
-### Example Usage
-```python
-conf_words=['a','b','c','d','e','f','g','h','i','j','k','l','m','n']
-word_list=['k','l','m','n', 'o', 'p', 'q', 'r', 's']
+## `new_conf_words` Function
 
-# Call the function and print the result
-result_index = conf_word_check(conf_words, word_list)
-print(result_index, word_list[result_index])
-# Output: 4 o
-```
+The `new_conf_words` function is designed to update the `conf_words` list based on the input parameters. It utilizes the `conf_word_check` function and returns two lists.
+
+### Arguments
+- `buffer`: A list of strings representing a buffer sequence.
+- `word_list`: A list of strings representing a sequence of words.
+- `conf_words`: A list of strings representing the current state of confirmed words.
+
+### Output
+The function returns two lists:
+- `conf_words`: Updated list of confirmed words.
+- `buffer`: Remaining elements in the buffer after processing.
+
+### Functionality
+The function first uses the `conf_word_check` function to find the index `k` where the sequences `conf_words` and `word_list` match. It then updates the `conf_words` list by appending elements from the `buffer` until a mismatch is encountered or the buffer is exhausted. The remaining elements in the buffer after processing are returned.
