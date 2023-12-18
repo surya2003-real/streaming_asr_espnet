@@ -24,10 +24,10 @@ def load_audio_chunk(fname, beg, end):
     return audio[beg_s:end_s]
 
 
-def initial_audio(model):
+def initial_audio(model,audio):
     global buffer
     global transcription
-    text = transcribe(model,buffer)
+    text = transcribe(model,audio)
     return text
 
 def transcribe(model,audio):
@@ -52,7 +52,6 @@ print("Audio duration is: %2.2f seconds" % duration, file=logfile)
 
 for i in range(0,3):
     a = load_audio_chunk(audio_path,i,i+1)
-    buffer.append(a)
-    t=initial_audio(speech2text)
+    t=initial_audio(speech2text,a)
     transcription += t
     word_list.append(t)
