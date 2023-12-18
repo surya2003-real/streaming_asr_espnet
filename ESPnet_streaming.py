@@ -54,4 +54,4 @@ for i in range(0,3):
     a = load_audio_chunk(audio_path,i,i+1)
     t=initial_audio(speech2text,a)
     transcription += t
-    word_list.append(t)
+    conf_words.append(t)
