@@ -35,3 +35,11 @@ The function returns two lists:
 
 ### Functionality
 The function first uses the `conf_word_check` function to find the index `k` where the sequences `conf_words` and `word_list` match. It then updates the `conf_words` list by appending elements from the `buffer` until a mismatch is encountered or the buffer is exhausted. The remaining elements in the buffer after processing are returned.
+
+## `evaluate.py`
+
+Hardcode the list of audio_file paths and their corresponding correct transcriptions.
+
+Then you can pass the model with the config(.yaml) and model_file(.pth) as agruments from the command line.
+
+It will print the WER and CER of the final transcription evalueated over all the audio files
