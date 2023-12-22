@@ -1,9 +1,6 @@
-import sys
-import numpy as np
 import librosa  
 from functools import lru_cache
 import time
-import argparse
 from espnet2.bin.asr_inference import Speech2Text
 from new_conf_words import new_conf_words
 import os
