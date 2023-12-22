@@ -1,6 +1,7 @@
 from conf_word_check import conf_word_check
 def new_conf_words(buffer, word_list, conf_words):
-    k=conf_word_check(conf_words, word_list)
+    k, alarm=conf_word_check(conf_words, word_list)
+    k+=alarm
     if(len(word_list)==k):
         return [], [], []
     cnt=0
