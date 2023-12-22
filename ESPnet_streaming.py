@@ -5,11 +5,13 @@ from espnet2.bin.asr_inference import Speech2Text
 from new_conf_words import new_conf_words
 import os
 
+# Function to load audio file
 @lru_cache
 def load_audio(fname):
     a, _ = librosa.load(fname, sr=16000)
     return a
 
+# Function to load an audio chunk from the larger file
 def load_audio_chunk(fname, beg, end):
     audio = load_audio(fname)
     beg_s = int(beg*16000)
@@ -23,13 +25,17 @@ def initial_audio(model,audio):
     text = transcribe(model,audio)
     return text
 
+# Function to transcribe audio chunk
 def transcribe(model,audio):
     nbest = model(audio)
     return nbest[0][0]
 
 def generate_transcription(audio_path,config_file,model_file,device='cuda'):
+    # Modify the following line based on the path to the config file and model file
     os.chdir('/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500')
     speech2text = Speech2Text(config_file,model_file,device=device)
+
+    #Variable initializations
     buffer = []
     transcription = ""
     conf_words=[]
@@ -38,6 +44,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     audio_len = len(load_audio(audio_path))
     duration = audio_len/SAMPLING_RATE
     print("Audio duration is: %2.2f seconds" % duration)
+
     initial_time = time.time()
     curr_time=0
     second_count = 0
@@ -53,11 +60,14 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     #     if delay > 0:
     #         time.sleep(delay)
     #     print(second_count)
+
     if duration<8:
         a = load_audio_chunk(audio_path,0,duration)
         txt = initial_audio(speech2text,a)
         transcription += " "+txt
         return transcription
+    
+    # The first 7 seconds of the audio file are transcribed
     a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
     txt = initial_audio(speech2text,a)
     words = txt.split()
@@ -66,6 +76,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     curr_time += 1
     transcription += " "+" ".join(conf_words)
     # curr_time = 1
+
     while curr_time+7<duration:
         start_time = time.time()
         a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
