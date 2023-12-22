@@ -1,5 +1,21 @@
 # Streaming ASR ESPnet Model
 
+## `generate_transcription` Function
+
+The `generate_transcription` function takes inputs for the model and audio file path
+
+### Arguments
+- `audio_path` : The path of the audio file on which we are running ASR
+- `config_file` : The model configuration file, this should have an extension _.yaml_
+- `model_file` : The model file, this should have an extension _.pth_
+- `device` : The device on which we are running the model it can be _cpu/cuda_. The default is _cuda_
+
+We are using the `time` module to simulate live-streaming so that we wait for the next audio chunk to be inputed before processing it. We are using a buffer of length __7__ seconds where we first transcribe the first 7 seconds and then we keep jumping by __1__ second and process the output of that audio file. We take care of ignoring overlaps while appending the text.
+
+- `transcription` : Stores the entire transcription upto the time we have __confidently__ transcribed
+- `conf_words` : Stores the words which we are confident are correct
+- `buffer_words` : Stores the words that will be added to the new buffer region and on which we need to check for overlaps to ensure confidence
+
 ## `conf_word_check` Function
 
 The `conf_word_check` function takes two lists of strings as its arguments and returns an integer value.
