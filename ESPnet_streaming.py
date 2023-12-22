@@ -44,18 +44,25 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     initial_time = time.time()
     curr_time=0
     second_count = 0
-    for i in range(0,0):
-        start_time = time.time()
-        a = load_audio_chunk(audio_path,i,i+1)
-        txt = initial_audio(speech2text,a)
-        transcription += " "+txt
-        conf_words.append(txt)
-        print(transcription, time.time()-start_time)    
-        second_count += 1
-        delay = second_count - (time.time() - initial_time)
-        if delay > 0:
-            time.sleep(delay)
-        print(second_count)
+    # for i in range(0,0):
+    #     start_time = time.time()
+    #     a = load_audio_chunk(audio_path,i,i+1)
+    #     txt = initial_audio(speech2text,a)
+    #     transcription += " "+txt
+    #     conf_words.append(txt)
+    #     print(transcription, time.time()-start_time)    
+    #     second_count += 1
+    #     delay = second_count - (time.time() - initial_time)
+    #     if delay > 0:
+    #         time.sleep(delay)
+    #     print(second_count)
+
+    a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
+    txt = initial_audio(speech2text,a)
+    words = txt.split()
+    conf_words += words[:-4]
+    buffer += words[-4:]
+    curr_time += 1
 
     curr_time = 1
     while curr_time+7<duration:
