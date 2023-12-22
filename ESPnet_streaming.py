@@ -76,7 +76,8 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     curr_time += 1
     transcription += " "+" ".join(conf_words)
     # curr_time = 1
-
+    print(curr_time-1, min(curr_time+6, duration), transcription)
+    print("breakdown",conf_words, buffer)
     while curr_time+7<duration:
         start_time = time.time()
         a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
@@ -84,9 +85,13 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
         print(txt)
         curr_time += 1
         word_list = txt.split()
+        print(word_list)
+        word_list=word_list[:-1]
         conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
-        transcription += " "+" ".join(temp)
+        if(len(temp)>0):
+            transcription += " "+" ".join(temp)
         print(curr_time-1, min(curr_time+6, duration), transcription, time.time()-start_time)
+        print("breakdown",conf_words, buffer)
         second_count+=1
         delay = second_count - (time.time() - initial_time)
         if delay > 0:
