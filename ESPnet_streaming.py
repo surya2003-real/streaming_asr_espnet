@@ -60,9 +60,8 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
     txt = initial_audio(speech2text,a)
     words = txt.split()
-    words = words[:-4]
-    conf_words += words[:4]
-    buffer += words[4:]
+    conf_words += words[:-4]
+    buffer += words[-4:]
     curr_time += 1
 
     curr_time = 1
