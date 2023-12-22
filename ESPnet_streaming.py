@@ -53,7 +53,11 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     #     if delay > 0:
     #         time.sleep(delay)
     #     print(second_count)
-
+    if duration<8:
+        a = load_audio_chunk(audio_path,0,duration)
+        txt = initial_audio(speech2text,a)
+        transcription += " "+txt
+        return transcription
     a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
     txt = initial_audio(speech2text,a)
     words = txt.split()
@@ -79,8 +83,3 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
         print(second_count)
     transcription += " "+" ".join(buffer)
     return transcription
-
-
-
-#Example command:
-#python3 ESPnet_streaming.py /home/suryansh/MADHAV/hindi_data/givenFolderHSp/finalSplitAudio/8janA_33.wav /home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/config.yaml /home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth

@@ -12,7 +12,7 @@ def new_conf_words(buffer, word_list, conf_words):
             break
     if(cnt==0):
         cnt+=1
-    return word_list[k-4:k+cnt], word_list[k+cnt:], word_list[k:k+cnt]
+    return conf_words[-3:]+word_list[k:k+cnt], word_list[k+cnt:], word_list[k:k+cnt]
 
 # conf_words=['l','m','n']
 # buffer=['k', 'q']
