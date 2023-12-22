@@ -25,7 +25,7 @@ The `conf_word_check` function takes two lists of strings as its arguments and r
 - `word_list`: Another list of strings representing a sequence of words.
 
 ### Output
-The function returns an integer value, `k` and an `alarm` flag to .
+The function returns an integer value, `k` and an `alarm` flag to take care of future updates.
 
 ### Functionality
 The function compares the elements of `conf_words` and `word_list` to find the index `k` where the two sequences match. It iterates through the elements of `conf_words` and checks for matches with the corresponding elements in `word_list`. If a match is found, it continues checking the subsequent elements in both sequences until a mismatch is encountered or one of the sequences reaches its end.
