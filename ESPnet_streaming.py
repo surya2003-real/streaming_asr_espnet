@@ -63,12 +63,13 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     conf_words += words[:-4]
     buffer += words[-4:]
     curr_time += 1
-
-    curr_time = 1
+    transcription += " "+" ".join(conf_words)
+    # curr_time = 1
     while curr_time+7<duration:
         start_time = time.time()
         a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
         txt = initial_audio(speech2text,a)
+        print(txt)
         curr_time += 1
         word_list = txt.split()
         conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)

@@ -1,9 +1,13 @@
 def conf_word_check(conf_words, word_list):
+    print(len(conf_words), len(word_list))
     conf_word= conf_words[-1]
-    modified_word_list=word_list[4:]
-    for i in range(len(modified_word_list)):
-        if(conf_word==modified_word_list[i]):
-            return i+5
+    for i in range(len(word_list)-4,3,-1):
+        if(conf_word==word_list[i]):
+            return i+1
+    conf_word= conf_words[-2]
+    for i in range(len(word_list)-4,3,-1):
+        if(conf_word==word_list[i]):
+            return i+1
     return 4
 
 # conf_words=['a','b','c','d','e','f','g','h','i','j','k','l','m','n']
