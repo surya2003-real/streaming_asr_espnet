@@ -1,8 +1,4 @@
-# Streaming ASR ESPnet
-
-## `initial_audio` Function
-
-This is a function that will be called to transcribe the first few words so that we can establish a buffer
+# Streaming ASR ESPnet Model
 
 ## `conf_word_check` Function
 
@@ -13,7 +9,7 @@ The `conf_word_check` function takes two lists of strings as its arguments and r
 - `word_list`: Another list of strings representing a sequence of words.
 
 ### Output
-The function returns an integer value, `k`.
+The function returns an integer value, `k` and an `alarm` flag to .
 
 ### Functionality
 The function compares the elements of `conf_words` and `word_list` to find the index `k` where the two sequences match. It iterates through the elements of `conf_words` and checks for matches with the corresponding elements in `word_list`. If a match is found, it continues checking the subsequent elements in both sequences until a mismatch is encountered or one of the sequences reaches its end.
