@@ -9,7 +9,7 @@ import torch
 from IPython.display import Audio
 from pprint import pprint
 import numpy as np
-
+from funasr_onnx import Fsmn_vad
 # Function to load audio file
 @lru_cache
 def load_audio(fname):
@@ -32,17 +32,6 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     # Modify the following line based on the path to the config file and model file
     os.chdir('/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500')
     speech2text = Speech2Text(config_file,model_file,device=device)
-    torch.set_num_threads(1)
-
-    # download example
-    # torch.hub.download_url_to_file('https://models.silero.ai/vad_models/en.wav', 'en_example.wav')
-
-    model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
-                                model='silero_vad',
-                                force_reload=True)
-    (get_speech_timestamps,
-    _, read_audio,
-    *_) = utils
 
     #Variable initializations
     buffer = []
@@ -79,9 +68,12 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     while curr_time+7<audio_duration:
         start_time = time.time()
         a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, audio_duration))
-        speech_timestamps = get_speech_timestamps(a, model, sampling_rate=SAMPLING_RATE, threshold=0.2)
-        df = pd.DataFrame(speech_timestamps)
-        df = df // 16
+        model_dir = "/home/suryansh/MADHAV/FSMN-VAD"
+        model = Fsmn_vad(model_dir, quantize=True)
+        result = model(a)
+        result = np.asarray(result, dtype=np.int32)
+        result=result.reshape((result.shape[1],2))
+        df=pd.DataFrame(result, columns=['start', 'end'])
         print(df)
         speech = np.array([])
         duration=7*1000
@@ -102,7 +94,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
             curr_time += 1
             word_list = txt.split()
             print(word_list)
-            word_list=word_list[:-1]
+            # word_list=word_list[:-1]
             conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
             if(len(temp)>0):
                 transcription += " "+" ".join(temp)

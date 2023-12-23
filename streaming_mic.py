@@ -3,7 +3,7 @@ from espnet2.bin.asr_inference import Speech2Text
 from new_conf_words import new_conf_words
 import librosa
 import numpy as np
-
+import os
 import sys
 import time
 
@@ -13,10 +13,10 @@ port = 43007
 SAMPLING_RATE = 16000
 
 # model options
-config_file = "/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/config.yaml"
-model_file = "/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/valid.acc.best"
+config_file = "/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
+model_file = "/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth"
 device = 'cuda'
-
+os.chdir('/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500')
 model = Speech2Text(config_file,model_file,device=device)
 
 ######### Server objects
@@ -137,7 +137,8 @@ class ServerProcessor:
 
         try:
             while True:
-                time.sleep(1-(time.time()-initial_time))
+                if(1-(time.time()-initial_time)>0):
+                    time.sleep(1-(time.time()-initial_time))
                 start_time = time.time()
                 a = self.receive_audio_chunk()
                 if a is None:
