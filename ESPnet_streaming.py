@@ -35,7 +35,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     torch.set_num_threads(1)
 
     # download example
-    torch.hub.download_url_to_file('https://models.silero.ai/vad_models/en.wav', 'en_example.wav')
+    # torch.hub.download_url_to_file('https://models.silero.ai/vad_models/en.wav', 'en_example.wav')
 
     model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
                                 model='silero_vad',
@@ -51,21 +51,21 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     word_list=[]
     SAMPLING_RATE = 16000
     audio_len = len(load_audio(audio_path))
-    duration = audio_len/SAMPLING_RATE
-    print("Audio duration is: %2.2f seconds" % duration)
+    audio_duration = audio_len/SAMPLING_RATE
+    print("Audio duration is: %2.2f seconds" % audio_duration)
 
     initial_time = time.time()
     curr_time=0
     second_count = 0
 
-    if duration<8:
-        a = load_audio_chunk(audio_path,0,duration)
+    if audio_duration<8:
+        a = load_audio_chunk(audio_path,0,audio_duration)
         txt = transcribe(speech2text,a)
         transcription += " "+txt
         return transcription
     
     # The first 7 seconds of the audio file are transcribed
-    a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
+    a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, audio_duration))
     txt = transcribe(speech2text,a)
     words = txt.split()
     conf_words += words[:-4]
@@ -73,12 +73,12 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     curr_time += 1
     transcription += " "+" ".join(conf_words)
     # curr_time = 1
-    print(curr_time-1, min(curr_time+6, duration), transcription)
+    print(curr_time-1, min(curr_time+6, audio_duration), transcription)
     print("breakdown",conf_words, buffer)
     speech = np.array([])
-    while curr_time+7<duration:
+    while curr_time+7<audio_duration:
         start_time = time.time()
-        a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
+        a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, audio_duration))
         speech_timestamps = get_speech_timestamps(a, model, sampling_rate=SAMPLING_RATE, threshold=0.2)
         df = pd.DataFrame(speech_timestamps)
         df = df // 16
@@ -96,7 +96,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     #         print("Y")
             speech = np.concatenate([speech, a[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
         print(len(speech))
-        if(len(speech)>1000):
+        if(len(speech)>500):
             txt = transcribe(speech2text,speech)
             print(txt)
             curr_time += 1
@@ -106,7 +106,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
             conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
             if(len(temp)>0):
                 transcription += " "+" ".join(temp)
-            print(curr_time-1, min(curr_time+6, duration), transcription, time.time()-start_time)
+            print(curr_time-1, min(curr_time+6, audio_duration), transcription, time.time()-start_time)
             print("breakdown",conf_words, buffer)
         second_count+=1
         delay = second_count - (time.time() - initial_time)
