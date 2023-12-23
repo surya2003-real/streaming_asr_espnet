@@ -4,7 +4,11 @@ import time
 from espnet2.bin.asr_inference import Speech2Text
 from new_conf_words import new_conf_words
 import os
-
+import pandas as pd
+import torch
+from IPython.display import Audio
+from pprint import pprint
+import numpy as np
 # Function to load audio file
 @lru_cache
 def load_audio(fname):
@@ -34,7 +38,17 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     # Modify the following line based on the path to the config file and model file
     os.chdir('/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500')
     speech2text = Speech2Text(config_file,model_file,device=device)
+    torch.set_num_threads(1)
+    # download example
+    torch.hub.download_url_to_file('https://models.silero.ai/vad_models/en.wav', 'en_example.wav')
 
+    model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
+                                model='silero_vad',
+                                force_reload=True)
+    (get_speech_timestamps,
+    _, read_audio,
+    *_) = utils
+    sampling_rate=16000
     #Variable initializations
     buffer = []
     transcription = ""
@@ -78,20 +92,39 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     # curr_time = 1
     print(curr_time-1, min(curr_time+6, duration), transcription)
     print("breakdown",conf_words, buffer)
+    speech = np.array([])
     while curr_time+7<duration:
         start_time = time.time()
         a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
-        txt = initial_audio(speech2text,a)
-        print(txt)
-        curr_time += 1
-        word_list = txt.split()
-        print(word_list)
-        word_list=word_list[:-1]
-        conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
-        if(len(temp)>0):
-            transcription += " "+" ".join(temp)
-        print(curr_time-1, min(curr_time+6, duration), transcription, time.time()-start_time)
-        print("breakdown",conf_words, buffer)
+        speech_timestamps = get_speech_timestamps(a, model, sampling_rate=sampling_rate, threshold=0.2)
+        df = pd.DataFrame(speech_timestamps)
+        df = df // 16
+        print(df)
+        speech = np.array([])
+        duration=7*1000
+        for _, row in df.iterrows():
+            start_sample = row['start']
+            end_sample = row['end']
+    #         print(start_sample, end_sample, duration)
+            if(start_sample<0 and end_sample<0):
+                continue
+            if(start_sample>duration and end_sample>duration):
+                break
+    #         print("Y")
+            speech = np.concatenate([speech, a[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
+        print(len(speech))
+        if(len(speech)>1000):
+            txt = initial_audio(speech2text,speech)
+            print(txt)
+            curr_time += 1
+            word_list = txt.split()
+            print(word_list)
+            word_list=word_list[:-1]
+            conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
+            if(len(temp)>0):
+                transcription += " "+" ".join(temp)
+            print(curr_time-1, min(curr_time+6, duration), transcription, time.time()-start_time)
+            print("breakdown",conf_words, buffer)
         second_count+=1
         delay = second_count - (time.time() - initial_time)
         if delay > 0:
