@@ -9,6 +9,7 @@ import torch
 from IPython.display import Audio
 from pprint import pprint
 import numpy as np
+
 # Function to load audio file
 @lru_cache
 def load_audio(fname):
@@ -22,13 +23,6 @@ def load_audio_chunk(fname, beg, end):
     end_s = int(end*16000)
     return audio[beg_s:end_s]
 
-
-def initial_audio(model,audio):
-    global buffer
-    global transcription
-    text = transcribe(model,audio)
-    return text
-
 # Function to transcribe audio chunk
 def transcribe(model,audio):
     nbest = model(audio)
@@ -39,6 +33,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     os.chdir('/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500')
     speech2text = Speech2Text(config_file,model_file,device=device)
     torch.set_num_threads(1)
+
     # download example
     torch.hub.download_url_to_file('https://models.silero.ai/vad_models/en.wav', 'en_example.wav')
 
@@ -48,7 +43,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     (get_speech_timestamps,
     _, read_audio,
     *_) = utils
-    sampling_rate=16000
+
     #Variable initializations
     buffer = []
     transcription = ""
@@ -62,28 +57,16 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     initial_time = time.time()
     curr_time=0
     second_count = 0
-    # for i in range(0,0):
-    #     start_time = time.time()
-    #     a = load_audio_chunk(audio_path,i,i+1)
-    #     txt = initial_audio(speech2text,a)
-    #     transcription += " "+txt
-    #     conf_words.append(txt)
-    #     print(transcription, time.time()-start_time)    
-    #     second_count += 1
-    #     delay = second_count - (time.time() - initial_time)
-    #     if delay > 0:
-    #         time.sleep(delay)
-    #     print(second_count)
 
     if duration<8:
         a = load_audio_chunk(audio_path,0,duration)
-        txt = initial_audio(speech2text,a)
+        txt = transcribe(speech2text,a)
         transcription += " "+txt
         return transcription
     
     # The first 7 seconds of the audio file are transcribed
     a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
-    txt = initial_audio(speech2text,a)
+    txt = transcribe(speech2text,a)
     words = txt.split()
     conf_words += words[:-4]
     buffer += words[-4:]
@@ -96,7 +79,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
     while curr_time+7<duration:
         start_time = time.time()
         a = load_audio_chunk(audio_path,curr_time,min(curr_time+7, duration))
-        speech_timestamps = get_speech_timestamps(a, model, sampling_rate=sampling_rate, threshold=0.2)
+        speech_timestamps = get_speech_timestamps(a, model, sampling_rate=SAMPLING_RATE, threshold=0.2)
         df = pd.DataFrame(speech_timestamps)
         df = df // 16
         print(df)
@@ -114,7 +97,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda'):
             speech = np.concatenate([speech, a[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
         print(len(speech))
         if(len(speech)>1000):
-            txt = initial_audio(speech2text,speech)
+            txt = transcribe(speech2text,speech)
             print(txt)
             curr_time += 1
             word_list = txt.split()
