@@ -1,6 +1,8 @@
-from ESPnet_streaming import *
+from ESPnet_streaming import transcribe
+from espnet2.bin.asr_inference import Speech2Text
 from new_conf_words import new_conf_words
-
+import librosa
+import numpy as np
 
 import sys
 import time
@@ -81,40 +83,41 @@ class ServerProcessor:
             return None
         return np.concatenate(out)
 
-    def format_output_transcript(self,o):
-        # output format in stdout is like:
-        # 0 1720 Takhle to je
-        # - the first two words are:
-        #    - beg and end timestamp of the text segment, as estimated by Whisper model. The timestamps are not accurate, but they're useful anyway
-        # - the next words: segment transcript
+    # def format_output_transcript(self,o):
+    #     # output format in stdout is like:
+    #     # 0 1720 Takhle to je
+    #     # - the first two words are:
+    #     #    - beg and end timestamp of the text segment, as estimated by Whisper model. The timestamps are not accurate, but they're useful anyway
+    #     # - the next words: segment transcript
 
-        # This function differs from whisper_online.output_transcript in the following:
-        # succeeding [beg,end] intervals are not overlapping because ELITR protocol (implemented in online-text-flow events) requires it.
-        # Therefore, beg, is max of previous end and current beg outputed by Whisper.
-        # Usually it differs negligibly, by appx 20 ms.
+    #     # This function differs from whisper_online.output_transcript in the following:
+    #     # succeeding [beg,end] intervals are not overlapping because ELITR protocol (implemented in online-text-flow events) requires it.
+    #     # Therefore, beg, is max of previous end and current beg outputed by Whisper.
+    #     # Usually it differs negligibly, by appx 20 ms.
 
-        if o[0] is not None:
-            beg, end = o[0]*1000,o[1]*1000
-            if self.last_end is not None:
-                beg = max(beg, self.last_end)
+    #     if o[0] is not None:
+    #         beg, end = o[0]*1000,o[1]*1000
+    #         if self.last_end is not None:
+    #             beg = max(beg, self.last_end)
 
-            self.last_end = end
-            print("%1.0f %1.0f %s" % (beg,end,o[2]),flush=True,file=sys.stderr)
-            return "%1.0f %1.0f %s" % (beg,end,o[2])
-        else:
-            print(o,file=sys.stderr,flush=True)
-            return None
+    #         self.last_end = end
+    #         print("%1.0f %1.0f %s" % (beg,end,o[2]),flush=True,file=sys.stderr)
+    #         return "%1.0f %1.0f %s" % (beg,end,o[2])
+    #     else:
+    #         print(o,file=sys.stderr,flush=True)
+    #         return None
 
-    def send_result(self, o):
-        msg = self.format_output_transcript(o)
-        if msg is not None:
-            self.connection.send(msg)
+    # def send_result(self, prev_transcript, transcription):
+    #     msg = self.format_output_transcript(prev_transcript, transcription)
+    #     if msg is not None:
+    #         self.connection.send(msg)
 
     def process(self):
         # handle one client connection
 
         #Variable initializations
         buffer = []
+        prev_transcript = ""
         transcription = ""
         conf_words=[]
         word_list=[]
@@ -132,32 +135,31 @@ class ServerProcessor:
         transcription += " "+" ".join(conf_words)
         print(curr_time-1, curr_time+6, transcription)
 
-        while True:
-            time.sleep(1-(time.time()-initial_time))
-            start_time = time.time()
-            a = self.receive_audio_chunk()
-            if a is None:
-                print("break here",file=sys.stderr)
-                break
-            txt = transcribe(model,a)
-            print(txt)
-            curr_time += 1
-            word_list = txt.split()
-            print(word_list)
-            word_list=word_list[:-1]
-            conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
-            if(len(temp)>0):
-                transcription += " "+" ".join(temp)
-            print(curr_time-1, curr_time+6, transcription, time.time()-start_time)
-            initial_time = time.time()
-            # self.online_asr_proc.insert_audio_chunk(a)
-            # o = online.process_iter()
-            try:
-                self.send_result(o)
-            except BrokenPipeError:
-                print("broken pipe -- connection closed?",file=sys.stderr)
-                break
+        try:
+            while True:
+                time.sleep(1-(time.time()-initial_time))
+                start_time = time.time()
+                a = self.receive_audio_chunk()
+                if a is None:
+                    print("break here",file=sys.stderr)
+                    break
+                txt = transcribe(model,a)
+                print(txt)
+                curr_time += 1
+                word_list = txt.split()
+                print(word_list)
+                word_list=word_list[:-1]
+                conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
+                if(len(temp)>0):
+                    transcription += " "+" ".join(temp)
+                print(curr_time-1, curr_time+6, transcription, time.time()-start_time)
+                initial_time = time.time()
+                # self.online_asr_proc.insert_audio_chunk(a)
+                # o = online.process_iter()
+        except KeyboardInterrupt:
+            print("broken pipe -- connection closed?")
         transcription += " "+" ".join(buffer)
+        print(transcription)
         return transcription
 
 #        o = online.finish()  # this should be working
