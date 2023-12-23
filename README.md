@@ -10,6 +10,8 @@ The `generate_transcription` function takes inputs for the model and audio file 
 - `model_file` : The model file, this should have an extension _.pth_
 - `device` : The device on which we are running the model it can be _cpu/cuda_. The default is _cuda_
 
+We are using the `silero_vad` module as the VAD to increase the accuracy of the transcriptions. This _increases_ latency by a little bit.
+
 We are using the `time` module to simulate live-streaming so that we wait for the next audio chunk to be inputed before processing it. We are using a buffer of length __7__ seconds where we first transcribe the first 7 seconds and then we keep jumping by __1__ second and process the output of that audio file. We take care of ignoring overlaps while appending the text.
 
 - `transcription` : Stores the entire transcription upto the time we have __confidently__ transcribed
