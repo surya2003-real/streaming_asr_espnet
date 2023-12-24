@@ -141,10 +141,11 @@ class ServerProcessor:
                     time.sleep(1-(time.time()-initial_time))
                 start_time = time.time()
                 a = self.receive_audio_chunk()
-                if a is None:
-                    print("break here",file=sys.stderr)
-                    break
-                txt = transcribe(model,a)
+                running_audio = a[curr_time*16000:]
+                # if a is None:
+                #     print("break here")
+                #     break
+                txt = transcribe(model,running_audio)
                 print(txt)
                 curr_time += 1
                 word_list = txt.split()
