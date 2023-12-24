@@ -36,8 +36,7 @@ curr_time = 1
 # Callback function to read incoming data
 def callback(in_data, frame_count, time_info, status):
     global buffer, transcription, conf_words, curr_time,prev_audio,initial_time
-    audio_data_np = np.frombuffer(in_data, dtype=np.int16)
-    audio_data=audio_data_np.tolist()
+    audio_data = np.frombuffer(in_data, dtype=np.int16)
     if curr_time==1:
         txt = transcribe(model,audio_data)
         words = txt.split()
@@ -46,8 +45,10 @@ def callback(in_data, frame_count, time_info, status):
         curr_time += 1
         transcription += " "+" ".join(conf_words)
         print(curr_time-1, curr_time+6, transcription)
+        prev_audio = audio_data
     else:
         audio_data = prev_audio + audio_data
+        audio_data = audio_data[16000:]
         if(1-(time.time()-initial_time)>0):
             time.sleep(1-(time.time()-initial_time))
         start_time = time.time()
@@ -64,6 +65,7 @@ def callback(in_data, frame_count, time_info, status):
         if(len(temp)>0):
             transcription += " "+" ".join(temp)
         print(curr_time-1, curr_time+6, transcription, time.time()-start_time)
+        prev_audio = audio_data
         initial_time = time.time()
     # print(audio_data.shape)
     return (in_data, pa.paContinue)
