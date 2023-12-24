@@ -22,6 +22,7 @@ p = pa.PyAudio()
 
 CHANNELS = 1
 SAMPLE_RATE = 16000
+CHUNK = 1024
 
 #Variable initializations
 buffer = []
@@ -29,28 +30,84 @@ prev_transcript = ""
 transcription = ""
 conf_words=[]
 word_list=[]
-prev_audio = []
 
 curr_time = 1
 
 # Callback function to read incoming data
-def callback(in_data, frame_count, time_info, status):
-    global buffer, transcription, conf_words, curr_time,prev_audio,initial_time
-    audio_data = np.frombuffer(in_data, dtype=np.int16)
-    if curr_time==1:
-        txt = transcribe(model,audio_data)
-        words = txt.split()
-        conf_words += words[:-4]
-        buffer += words[-4:]
-        curr_time += 1
-        transcription += " "+" ".join(conf_words)
-        print(curr_time-1, curr_time+6, transcription)
-        prev_audio = audio_data
-    else:
-        audio_data = prev_audio + audio_data
-        audio_data = audio_data[16000:]
-        # if(1-(time.time()-initial_time)>0):
-        #     time.sleep(1-(time.time()-initial_time))
+# def callback(in_data, frame_count, time_info, status):
+#     global buffer, transcription, conf_words, curr_time,prev_audio,initial_time
+#     audio_data = np.frombuffer(in_data, dtype=np.int16)
+#     if curr_time==1:
+#         txt = transcribe(model,audio_data)
+#         words = txt.split()
+#         conf_words += words[:-4]
+#         buffer += words[-4:]
+#         curr_time += 1
+#         transcription += " "+" ".join(conf_words)
+#         print(curr_time-1, curr_time+6, transcription)
+#         prev_audio = audio_data
+#     else:
+#         audio_data = prev_audio + audio_data
+#         audio_data = audio_data[16000:]
+#         # if(1-(time.time()-initial_time)>0):
+#         #     time.sleep(1-(time.time()-initial_time))
+#         start_time = time.time()
+#         # if a is None:
+#         #     print("break here")
+#         #     break
+#         txt = transcribe(model,audio_data)
+#         print(txt)
+#         curr_time += 1
+#         word_list = txt.split()
+#         print(word_list)
+#         word_list=word_list[:-1]
+#         conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
+#         if(len(temp)>0):
+#             transcription += " "+" ".join(temp)
+#         print(curr_time-1, curr_time+6, transcription, time.time()-start_time)
+#         prev_audio = audio_data
+#         initial_time = time.time()
+#     # print(audio_data.shape)
+#     return (in_data, pa.paContinue)
+
+stream = p.open(format=pa.paInt16,
+                    channels=CHANNELS,
+                    rate=SAMPLE_RATE,
+                    input=True,
+                    input_device_index=dev_idx,
+                    frames_per_buffer=CHUNK
+                    )
+
+print('Listening...')
+
+stream.start_stream()
+
+frames = []
+for _ in range(0, int(SAMPLE_RATE / CHUNK * 7)):
+    data = stream.read(CHUNK)
+    frames.append(data)
+
+# time.sleep(7)
+audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
+initial_time = time.time()
+txt = transcribe(model,audio_data)
+words = txt.split()
+conf_words += words[:-4]
+buffer += words[-4:]
+curr_time += 1
+transcription += " "+" ".join(conf_words)
+print(curr_time-1, curr_time+6, transcription)
+
+# Keep the program running
+while True:
+    try:
+        if(1-(time.time()-initial_time)>0):
+            time.sleep(1-(time.time()-initial_time))
+        for _ in range(0, int(SAMPLE_RATE / CHUNK * 1)):
+            data = stream.read(CHUNK)
+            frames.append(data)
+        audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
+        audio_data = audio_data[-16000*7:]
         start_time = time.time()
         # if a is None:
         #     print("break here")
@@ -67,34 +124,6 @@ def callback(in_data, frame_count, time_info, status):
         print(curr_time-1, curr_time+6, transcription, time.time()-start_time)
         prev_audio = audio_data
         initial_time = time.time()
-    # print(audio_data.shape)
-    return (in_data, pa.paContinue)
-
-stream = p.open(format=pa.paInt16,
-                    channels=CHANNELS,
-                    rate=SAMPLE_RATE,
-                    input=True,
-                    input_device_index=dev_idx,
-                    stream_callback=callback
-                    )
-
-print('Listening...')
-
-stream.start_stream()
-
-# time.sleep(7)
-
-initial_time = time.time()
-
-
-# Keep the program running
-while stream.is_active():
-    try:
-        if curr_time==1:
-            time.sleep(7)
-        else:
-            if(1-(time.time()-initial_time)>0):
-                time.sleep(1-(time.time()-initial_time))
     except KeyboardInterrupt:
         break
 
