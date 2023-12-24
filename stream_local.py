@@ -49,8 +49,8 @@ def callback(in_data, frame_count, time_info, status):
     else:
         audio_data = prev_audio + audio_data
         audio_data = audio_data[16000:]
-        if(1-(time.time()-initial_time)>0):
-            time.sleep(1-(time.time()-initial_time))
+        # if(1-(time.time()-initial_time)>0):
+        #     time.sleep(1-(time.time()-initial_time))
         start_time = time.time()
         # if a is None:
         #     print("break here")
@@ -82,7 +82,7 @@ print('Listening...')
 
 stream.start_stream()
 
-time.sleep(7)
+# time.sleep(7)
 
 initial_time = time.time()
 
@@ -90,7 +90,11 @@ initial_time = time.time()
 # Keep the program running
 while stream.is_active():
     try:
-        pass
+        if curr_time==1:
+            time.sleep(7)
+        else:
+            if(1-(time.time()-initial_time)>0):
+                time.sleep(1-(time.time()-initial_time))
     except KeyboardInterrupt:
         break
 
