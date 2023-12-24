@@ -25,8 +25,9 @@ SAMPLE_RATE = 16000
 
 # Callback function to read incoming data
 def callback(in_data, frame_count, time_info, status):
-    global buffer, transcription, conf_words, curr_time
-    audio_data = np.frombuffer(in_data, dtype=np.int16)
+    global buffer, transcription, conf_words, curr_time,prev_audio,initial_time
+    audio_data_np = np.frombuffer(in_data, dtype=np.int16)
+    audio_data=audio_data_np.tolist()
     if curr_time==1:
         txt = transcribe(model,audio_data)
         words = txt.split()
@@ -36,6 +37,7 @@ def callback(in_data, frame_count, time_info, status):
         transcription += " "+" ".join(conf_words)
         print(curr_time-1, curr_time+6, transcription)
     else:
+        audio_data = prev_audio + audio_data
         if(1-(time.time()-initial_time)>0):
             time.sleep(1-(time.time()-initial_time))
         start_time = time.time()
@@ -72,6 +74,7 @@ prev_transcript = ""
 transcription = ""
 conf_words=[]
 word_list=[]
+prev_audio = []
 
 stream.start_stream()
 
