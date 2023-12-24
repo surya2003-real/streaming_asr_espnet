@@ -135,7 +135,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
         #         print("Y")
                 speech = np.concatenate([speech, a[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
             print(len(speech))
-            if(len(speech)>500):
+            if(len(speech)>4000):
                 txt = transcribe(speech2text,speech)
                 print(txt)
                 curr_time += 1
