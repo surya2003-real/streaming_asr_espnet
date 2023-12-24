@@ -23,6 +23,16 @@ p = pa.PyAudio()
 CHANNELS = 1
 SAMPLE_RATE = 16000
 
+#Variable initializations
+buffer = []
+prev_transcript = ""
+transcription = ""
+conf_words=[]
+word_list=[]
+prev_audio = []
+
+curr_time = 1
+
 # Callback function to read incoming data
 def callback(in_data, frame_count, time_info, status):
     global buffer, transcription, conf_words, curr_time,prev_audio,initial_time
@@ -68,20 +78,12 @@ stream = p.open(format=pa.paInt16,
 
 print('Listening...')
 
-#Variable initializations
-buffer = []
-prev_transcript = ""
-transcription = ""
-conf_words=[]
-word_list=[]
-prev_audio = []
-
 stream.start_stream()
 
 time.sleep(7)
 
 initial_time = time.time()
-curr_time = 1
+
 
 # Keep the program running
 while stream.is_active():
