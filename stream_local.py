@@ -3,12 +3,10 @@ import pyaudio as pa
 from ESPnet_streaming import transcribe
 from espnet2.bin.asr_inference import Speech2Text
 from new_conf_words import new_conf_words
-import librosa
 import numpy as np
 import os
-import sys
 import time
-from scipy.io.wavfile import write
+import soundfile as sf
 
 def pcm2float(sig, dtype='float32'):
     """Convert PCM signal to floating point with a range from -1 to 1.
@@ -136,14 +134,11 @@ print("stream stopped")
 transcription += " "+" ".join(buffer)
 print(transcription)
 print("ye rhaaa")
-sample_rate = 16000  # Example sample rate (Hz)
-        # audio_data = np.random.uniform(-1, 1, size=(sample_rate * 5,))  # 5 seconds of random audio
 
-        # Specify the file name
 filename = "outpu.wav"
 print(audio_data)
 
         # Save the audio data to a WAV file
-write(filename, sample_rate, audio_data.astype(np.int16))
+sf.write(filename, audio_data,SAMPLE_RATE)
 
 print(f"Audio data has been successfully saved to {filename}")
