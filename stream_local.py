@@ -107,7 +107,7 @@ while True:
             frames.append(data)
         audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
         print("audio_data: ", audio_data)
-        audio_data = audio_data[-16000*7:]
+        audio_data = audio_data[-int(SAMPLE_RATE/CHUNK)*7:]
         start_time = time.time()
         # if a is None:
         #     print("break here")
