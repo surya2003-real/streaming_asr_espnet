@@ -101,8 +101,8 @@ print(curr_time-1, curr_time+6, transcription)
 # Keep the program running
 while True:
     try:
-        if(1-(time.time()-initial_time)>0):
-            time.sleep(1-(time.time()-initial_time))
+        # if(1-(time.time()-initial_time)>0):
+        #     time.sleep(1-(time.time()-initial_time))
         for _ in range(0, int(SAMPLE_RATE / CHUNK * 1)):
             data = stream.read(CHUNK)
             frames.append(data)
