@@ -8,14 +8,13 @@ import numpy as np
 import os
 import sys
 import time
-
-
+from scipy.io.wavfile import write
 # model options
-config_file = "/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
-model_file = "/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth"
-device = 'cuda'
-os.chdir('/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500')
-model = Speech2Text(config_file,model_file,device=device)
+config_file = "/media/yawningwinner/New Volume/MADHAV_LAB/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
+model_file = "/media/yawningwinner/New Volume/MADHAV_LAB/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth"
+# device = 'cuda'
+os.chdir('/media/yawningwinner/New Volume/MADHAV_LAB/asr_train_asr_raw_hindi_bpe500')
+model = Speech2Text(config_file,model_file)
 
 dev_idx, devices = find_mics()
 p = pa.PyAudio()
@@ -107,6 +106,7 @@ while True:
             data = stream.read(CHUNK)
             frames.append(data)
         audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
+        print("audio_data: ", audio_data)
         audio_data = audio_data[-16000*7:]
         start_time = time.time()
         # if a is None:
@@ -137,6 +137,18 @@ print("stream stopped")
 
 transcription += " "+" ".join(buffer)
 print(transcription)
+print("ye rhaaa")
+sample_rate = 16000  # Example sample rate (Hz)
+        # audio_data = np.random.uniform(-1, 1, size=(sample_rate * 5,))  # 5 seconds of random audio
+
+        # Specify the file name
+filename = "outpu.wav"
+print(audio_data)
+
+        # Save the audio data to a WAV file
+write(filename, sample_rate, audio_data.astype(np.int16))
+
+print(f"Audio data has been successfully saved to {filename}")
         
 
 
