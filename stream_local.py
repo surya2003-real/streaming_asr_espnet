@@ -1,12 +1,12 @@
 from find_microphones import find_mics
 import pyaudio as pa
-from ESPnet_streaming import transcribe
-from espnet2.bin.asr_inference import Speech2Text
 from new_conf_words import new_conf_words
 import numpy as np
 import os
 import time
 import soundfile as sf
+from ESPnet_streaming import transcribe
+from espnet2.bin.asr_inference import Speech2Text
 
 def pcm2float(sig, dtype='float32'):
     """Convert PCM signal to floating point with a range from -1 to 1.
@@ -38,10 +38,10 @@ def pcm2float(sig, dtype='float32'):
     return (sig.astype(dtype) - offset) / abs_max
 
 # model options
-config_file = "/media/yawningwinner/New Volume/MADHAV_LAB/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
-model_file = "/media/yawningwinner/New Volume/MADHAV_LAB/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth"
+config_file = "C:/Users/Sankalp Mittal/Desktop/MadhavLab/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
+model_file = "C:/Users/Sankalp Mittal/Desktop/MadhavLab/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth"
+os.chdir('C:/Users/Sankalp Mittal/Desktop/MadhavLab/asr_train_asr_raw_hindi_bpe500')
 # device = 'cuda'
-os.chdir('/media/yawningwinner/New Volume/MADHAV_LAB/asr_train_asr_raw_hindi_bpe500')
 model = Speech2Text(config_file,model_file)
 
 dev_idx, devices = find_mics()
@@ -103,7 +103,7 @@ while True:
         new_data = pcm2float(new_data)
         audio_data=np.append(audio_data,new_data)
         print("audio_data: ", audio_data)
-        transcription_data = audio_data[-int(SAMPLE_RATE/CHUNK)*7:]
+        transcription_data = audio_data[-SAMPLE_RATE*7:]
         start_time = time.time()
         # if a is None:
         #     print("break here")
@@ -133,12 +133,6 @@ print("stream stopped")
 
 transcription += " "+" ".join(buffer)
 print(transcription)
-print("ye rhaaa")
 
-filename = "outpu.wav"
 print(audio_data)
 
-        # Save the audio data to a WAV file
-sf.write(filename, audio_data,SAMPLE_RATE)
-
-print(f"Audio data has been successfully saved to {filename}")
