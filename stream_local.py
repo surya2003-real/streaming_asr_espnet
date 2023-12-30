@@ -5,7 +5,7 @@ import numpy as np
 import os
 import time
 import soundfile as sf
-from ESPnet_streaming import transcribe
+# from ESPnet_streaming import transcribe
 from espnet2.bin.asr_inference import Speech2Text
 
 def pcm2float(sig, dtype='float32'):
@@ -33,6 +33,10 @@ def pcm2float(sig, dtype='float32'):
     abs_max = 2 ** (i.bits - 1)
     offset = i.min + abs_max
     return (sig.astype(dtype) - offset) / abs_max
+
+def transcribe(model,audio):
+    nbest = model(audio)
+    return nbest[0][0]
 
 # model options
 config_file = "C:/Users/Sankalp Mittal/Desktop/MadhavLab/asr_train_asr_raw_hindi_bpe500/exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
