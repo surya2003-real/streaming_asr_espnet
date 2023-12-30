@@ -21,9 +21,6 @@ def pcm2float(sig, dtype='float32'):
     -------
     numpy.ndarray
         Normalized floating point data.
-    See Also
-    --------
-    float2pcm, dtype
     """
     sig = np.asarray(sig)
     if sig.dtype.kind not in 'iu':
@@ -102,7 +99,7 @@ while True:
         new_data = np.frombuffer(b''.join(new_frames), dtype=np.int16)
         new_data = pcm2float(new_data)
         audio_data=np.append(audio_data,new_data)
-        print("audio_data: ", audio_data)
+        # print("audio_data: ", audio_data)
         transcription_data = audio_data[-SAMPLE_RATE*7:]
         start_time = time.time()
         # if a is None:
@@ -112,7 +109,7 @@ while True:
         print(txt)
         curr_time += 1
         word_list = txt.split()
-        print(word_list)
+        # print(word_list)
         word_list=word_list[:-1]
         conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
         if(len(temp)>0):
@@ -134,5 +131,5 @@ print("stream stopped")
 transcription += " "+" ".join(buffer)
 print(transcription)
 
-print(audio_data)
+# print(audio_data)
 
