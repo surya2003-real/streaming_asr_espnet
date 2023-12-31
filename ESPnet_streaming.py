@@ -101,6 +101,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
     print("breakdown",conf_words, buffer)
     speech = np.array([])
     while curr_time+frame_length<audio_duration:
+        print(audio_duration, curr_time, curr_time+frame_length)
         start_time = time.time()
         a = load_audio_chunk(audio_path,curr_time,min(curr_time+frame_length, audio_duration))
         mixwav_sc = a[:,0]
@@ -138,15 +139,20 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
             if(len(speech)>4000):
                 txt = transcribe(speech2text,speech)
                 print(txt)
-                curr_time += 1
                 word_list = txt.split()
                 print(word_list)
                 # word_list=word_list[:-1]
                 conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
                 if(len(temp)>0):
                     transcription += " "+" ".join(temp)
-                print(curr_time-1, min(curr_time-1+frame_length, audio_duration), transcription, time.time()-start_time)
-                print("breakdown",conf_words, buffer)
+            else:
+                word_list=[]
+                conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
+                if(len(temp)>0):
+                    transcription += " "+" ".join(temp)
+            curr_time += 1
+            print(curr_time-1, min(curr_time-1+frame_length, audio_duration), transcription, time.time()-start_time)
+            print("breakdown",conf_words, buffer)
         else:
             txt = transcribe(speech2text,a)
             print(txt)
