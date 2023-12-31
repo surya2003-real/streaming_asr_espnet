@@ -1,15 +1,12 @@
 from find_microphones import find_mics
 import pyaudio as pa
 import pandas as pd
-import librosa
 from funasr_onnx import Fsmn_vad
 from panns_inference import AudioTagging
 from new_conf_words import new_conf_words
 import numpy as np
 import os
 import time
-import soundfile as sf
-# # from ESPnet_streaming import transcribe
 from espnet2.bin.asr_inference import Speech2Text
 from espnet2.bin.enh_inference import SeparateSpeech
 
