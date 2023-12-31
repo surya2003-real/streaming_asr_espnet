@@ -211,4 +211,5 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
 
     transcription += " "+" ".join(buffer)
     print(transcription)
+    os.chdir("..")
     return transcription
