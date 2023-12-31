@@ -51,10 +51,11 @@ def reshape(audio_data):
 # model options
 config_file = "exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
 model_file = "exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth"
+devices = 'cpu'
 
 os.chdir('C:/Users/Sankalp Mittal/Desktop/MadhavLab/streaming-asr-espnet/asr_train_asr_raw_hindi_bpe500')
 # device = 'cuda'
-model = Speech2Text(config_file,model_file)
+model = Speech2Text(config_file,model_file,device=devices)
 
 dev_idx, devices = find_mics()
 p = pa.PyAudio()
@@ -67,17 +68,17 @@ music_tolerance = 0.5
 vad_on = True
 
 separate_speech = {}
-os.chdir('C:/Users/Sankalp Mittal/Desktop/MadhavLab/streaming-asr-espnet')
 enh_model_sc = SeparateSpeech(
-    train_config="./speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
-    model_file="./speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
+    train_config="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
+    model_file="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
     # for segment-wise process on long speech
     normalize_segment_scale=False,
     show_progressbar=True,
+    device= devices,
     ref_channel=1,
     normalize_output_wav=True,
 )
-at = AudioTagging(checkpoint_path=None)
+at = AudioTagging(checkpoint_path=None,device=devices)
 
 #Variable initializations
 buffer = []
@@ -164,7 +165,7 @@ while further:
         
         # VAD
         if(vad_on):
-            model_dir = "FSMN-VAD"
+            model_dir = "../FSMN-VAD"
             vad_model = Fsmn_vad(model_dir,quantize=True)
             result = vad_model(new_data)
             result = np.asarray(result, dtype=np.int32)
@@ -183,8 +184,8 @@ while further:
                     break
                 # print("Y")
                 speech = np.concatenate([speech, new_data[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
-            # print(len(speech))
-            new_data = pcm2float(speech)
+            # print(speech)
+            new_data = speech
 
         audio_data=np.append(audio_data,new_data)
         # print("audio_data: ", audio_data)
