@@ -47,7 +47,11 @@ def reshape(audio_data):
     return audio_data
 
 # Main function
-def subtitile_feed(model_dir,config_file="exp/asr_train_asr_raw_hindi_bpe500/config.yaml",model_file="exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth",devices='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, SAMPLE_RATE=16000,CHANNELS=1,CHUNK=1000, vad_on=True):
+def subtitile_feed(model_dir,
+                   config_file="exp/asr_train_asr_raw_hindi_bpe500/config.yaml",
+                   model_file="exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth",
+                   devices='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, 
+                   SAMPLE_RATE=16000,CHANNELS=1,CHUNK=1000, vad_on=True,enh_on=True):
 
     os.chdir(model_dir)
     # device = 'cuda'
@@ -56,18 +60,19 @@ def subtitile_feed(model_dir,config_file="exp/asr_train_asr_raw_hindi_bpe500/con
     dev_idx, devices = find_mics()
     p = pa.PyAudio()
 
-    separate_speech = {}
-    enh_model_sc = SeparateSpeech(
-        train_config="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
-        model_file="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
-        # for segment-wise process on long speech
-        normalize_segment_scale=False,
-        show_progressbar=True,
-        device= devices,
-        ref_channel=1,
-        normalize_output_wav=True,
-    )
-    at = AudioTagging(checkpoint_path=None,device=devices)
+    if(enh_on):
+        separate_speech = {}
+        enh_model_sc = SeparateSpeech(
+            train_config="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
+            model_file="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
+            # for segment-wise process on long speech
+            normalize_segment_scale=False,
+            show_progressbar=True,
+            device= devices,
+            ref_channel=1,
+            normalize_output_wav=True,
+        )
+        at = AudioTagging(checkpoint_path=None,device=devices)
 
     #Variable initializations
     buffer = []
@@ -103,17 +108,18 @@ def subtitile_feed(model_dir,config_file="exp/asr_train_asr_raw_hindi_bpe500/con
     audio_data = pcm2float(audio_data)
 
     # Speech Enhancement
-    enhanced = reshape(audio_data)
-    mixwav_sc = enhanced[:,0]
-    wave = mixwav_sc[None, :]
-    at = AudioTagging(checkpoint_path=None, device='cuda')
-    (clipwise_output, embedding) = at.inference(wave)
-    print(clipwise_output[0][137])
-    if clipwise_output[0][0]>min_speech_limit:
-        if clipwise_output[0][137]>=music_tolerance:
-            print('Enhancement Required')
-            wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
-    audio_data=wave[0].squeeze()
+    if(enh_on):
+        enhanced = reshape(audio_data)
+        mixwav_sc = enhanced[:,0]
+        wave = mixwav_sc[None, :]
+        at = AudioTagging(checkpoint_path=None, device='cuda')
+        (clipwise_output, embedding) = at.inference(wave)
+        print(clipwise_output[0][137])
+        if clipwise_output[0][0]>min_speech_limit:
+            if clipwise_output[0][137]>=music_tolerance:
+                print('Enhancement Required')
+                wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
+        audio_data=wave[0].squeeze()
 
 
     txt = transcribe(model,audio_data)
@@ -138,18 +144,19 @@ def subtitile_feed(model_dir,config_file="exp/asr_train_asr_raw_hindi_bpe500/con
             new_data = pcm2float(new_data)
 
             # Speech Enhancement
-            enhanced = reshape(new_data)
-            mixwav_sc = enhanced[:,0]
-            wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
-            at = AudioTagging(checkpoint_path=None, device='cuda')
-            (clipwise_output, embedding) = at.inference(wave)
-            print(clipwise_output[0][137])
-            print(clipwise_output[0][0])
-            if clipwise_output[0][0]>min_speech_limit:
-                    if clipwise_output[0][137]>=music_tolerance:
-                        print('Enhancement Required')
-                        wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
-            new_data=wave[0].squeeze()
+            if(enh_on):
+                enhanced = reshape(new_data)
+                mixwav_sc = enhanced[:,0]
+                wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
+                at = AudioTagging(checkpoint_path=None, device='cuda')
+                (clipwise_output, embedding) = at.inference(wave)
+                print(clipwise_output[0][137])
+                print(clipwise_output[0][0])
+                if clipwise_output[0][0]>min_speech_limit:
+                        if clipwise_output[0][137]>=music_tolerance:
+                            print('Enhancement Required')
+                            wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
+                new_data=wave[0].squeeze()
             
             # VAD
             if(vad_on):
