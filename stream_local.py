@@ -54,7 +54,6 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
                    SAMPLE_RATE=16000,CHANNELS=1,CHUNK=1000, vad_on=True,enh_on=True):
 
     os.chdir(model_dir)
-    # device = 'cuda'
     model = Speech2Text(config_file,model_file,device=devices)
 
     dev_idx, devices = find_mics()
@@ -112,7 +111,7 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
         enhanced = reshape(audio_data)
         mixwav_sc = enhanced[:,0]
         wave = mixwav_sc[None, :]
-        at = AudioTagging(checkpoint_path=None, device='cuda')
+        at = AudioTagging(checkpoint_path=None, device=devices)
         (clipwise_output, embedding) = at.inference(wave)
         print(clipwise_output[0][137])
         if clipwise_output[0][0]>min_speech_limit:
@@ -148,7 +147,7 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
                 enhanced = reshape(new_data)
                 mixwav_sc = enhanced[:,0]
                 wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
-                at = AudioTagging(checkpoint_path=None, device='cuda')
+                at = AudioTagging(checkpoint_path=None, device=devices)
                 (clipwise_output, embedding) = at.inference(wave)
                 print(clipwise_output[0][137])
                 print(clipwise_output[0][0])
