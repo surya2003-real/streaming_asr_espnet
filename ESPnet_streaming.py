@@ -13,17 +13,17 @@ from funasr_onnx import Fsmn_vad
 from panns_inference import AudioTagging
 # Function to load audio file
 @lru_cache
-def load_audio(fname):
-    a, _ = librosa.load(fname, sr=16000)
+def load_audio(fname, SAMPLE_RATE):
+    a, _ = librosa.load(fname, sr=SAMPLE_RATE)
     if len(a.shape)==1:
         a=a.reshape((a.shape[0],1))
     return a
 
 # Function to load an audio chunk from the larger file
-def load_audio_chunk(fname, beg, end):
-    audio = load_audio(fname)
-    beg_s = int(beg*16000)
-    end_s = int(end*16000)
+def load_audio_chunk(fname, beg, end,SAMPLE_RATE):
+    audio = load_audio(fname,SAMPLE_RATE)
+    beg_s = int(beg*SAMPLE_RATE)
+    end_s = int(end*SAMPLE_RATE)
     return audio[beg_s:end_s, :]
 
 # Function to transcribe audio chunk
@@ -31,21 +31,22 @@ def transcribe(model,audio):
     nbest = model(audio)
     return nbest[0][0]
 
-def generate_transcription(audio_path,config_file,model_file,device='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, SAMPLING_RATE=16000, VAD_on=True):
+def generate_transcription(audio_path,config_file,model_file,device='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, SAMPLING_RATE=16000, VAD_on=True,enh_on=True):
 
     os.chdir('/home/suryansh/MADHAV')
-    from espnet2.bin.enh_inference import SeparateSpeech
-    separate_speech = {}
-    enh_model_sc = SeparateSpeech(
-        train_config="./speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
-        model_file="./speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
-        # for segment-wise process on long speech
-        normalize_segment_scale=False,
-        show_progressbar=True,
-        ref_channel=1,
-        normalize_output_wav=True,
-        device="cuda:0",
-    )
+    if(enh_on):
+        from espnet2.bin.enh_inference import SeparateSpeech
+        separate_speech = {}
+        enh_model_sc = SeparateSpeech(
+            train_config="./speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
+            model_file="./speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
+            # for segment-wise process on long speech
+            normalize_segment_scale=False,
+            show_progressbar=True,
+            ref_channel=1,
+            normalize_output_wav=True,
+            device=device,
+        )
     os.chdir('/home/suryansh/MADHAV/asr_train_asr_raw_hindi_bpe500')
     speech2text = Speech2Text(config_file,model_file,device=device)
     #Variable initializations
@@ -62,34 +63,35 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
     second_count = 0
 
     if audio_duration<8:
-        a = load_audio_chunk(audio_path,0,audio_duration)
+        a = load_audio_chunk(audio_path,0,audio_duration,SAMPLING_RATE)
         mixwav_sc = a[:,0]
         wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
-        at = AudioTagging(checkpoint_path=None, device='cuda')
+        at = AudioTagging(checkpoint_path=None, device=device)
         (clipwise_output, embedding) = at.inference(wave)
         print(clipwise_output[0][137])
         if clipwise_output[0][0]>min_speech_limit:
             if clipwise_output[0][137]>=music_tolerance:
                 print('Enhancement Required')
-                wave = enh_model_sc(mixwav_sc[None, ...], 16000)
+                wave = enh_model_sc(mixwav_sc[None, ...], SAMPLING_RATE)
         a=wave[0].squeeze()
         txt = transcribe(speech2text,a)
         transcription += " "+txt
         return transcription
     
     # The first 7 seconds of the audio file are transcribed
-    a = load_audio_chunk(audio_path,curr_time,min(curr_time+frame_length, audio_duration))
-    mixwav_sc = a[:,0]
-    wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
-    at = AudioTagging(checkpoint_path=None, device='cuda')
-    (clipwise_output, embedding) = at.inference(wave)
-    print(clipwise_output[0][137])
-    print(clipwise_output[0][0])
-    if clipwise_output[0][0]>min_speech_limit:
-            if clipwise_output[0][137]>=music_tolerance:
-                print('Enhancement Required')
-                wave = enh_model_sc(mixwav_sc[None, ...], 16000)
-    a=wave[0].squeeze()
+    a = load_audio_chunk(audio_path,curr_time,min(curr_time+frame_length, audio_duration),SAMPLING_RATE)
+    if(enh_on):
+        mixwav_sc = a[:,0]
+        wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
+        at = AudioTagging(checkpoint_path=None, device=device)
+        (clipwise_output, embedding) = at.inference(wave)
+        print(clipwise_output[0][137])
+        print(clipwise_output[0][0])
+        if clipwise_output[0][0]>min_speech_limit:
+                if clipwise_output[0][137]>=music_tolerance:
+                    print('Enhancement Required')
+                    wave = enh_model_sc(mixwav_sc[None, ...], SAMPLING_RATE)
+        a=wave[0].squeeze()
     txt = transcribe(speech2text,a)
     words = txt.split()
     conf_words += words[:-4]
@@ -103,18 +105,19 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
     while curr_time+frame_length<audio_duration:
         print(audio_duration, curr_time, curr_time+frame_length)
         start_time = time.time()
-        a = load_audio_chunk(audio_path,curr_time,min(curr_time+frame_length, audio_duration))
-        mixwav_sc = a[:,0]
-        wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
-        at = AudioTagging(checkpoint_path=None, device='cuda')
-        (clipwise_output, embedding) = at.inference(wave)
-        print(clipwise_output[0][137])
-        print(clipwise_output[0][0])
-        if clipwise_output[0][0]>min_speech_limit:
-            if clipwise_output[0][137]>=music_tolerance:
-                print('Enhancement Required')
-                wave = enh_model_sc(mixwav_sc[None, ...], 16000)
-        a=wave[0].squeeze()
+        a = load_audio_chunk(audio_path,curr_time,min(curr_time+frame_length, audio_duration),SAMPLING_RATE)
+        if(enh_on):
+            mixwav_sc = a[:,0]
+            wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
+            at = AudioTagging(checkpoint_path=None, device=device)
+            (clipwise_output, embedding) = at.inference(wave)
+            print(clipwise_output[0][137])
+            print(clipwise_output[0][0])
+            if clipwise_output[0][0]>min_speech_limit:
+                if clipwise_output[0][137]>=music_tolerance:
+                    print('Enhancement Required')
+                    wave = enh_model_sc(mixwav_sc[None, ...], SAMPLING_RATE)
+            a=wave[0].squeeze()
         if(VAD_on):
             model_dir = "/home/suryansh/MADHAV/FSMN-VAD"
             model = Fsmn_vad(model_dir, quantize=True)
