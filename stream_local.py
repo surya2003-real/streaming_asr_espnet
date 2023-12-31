@@ -47,7 +47,7 @@ def reshape(audio_data):
     return audio_data
 
 # Main function
-def subtitile_feed(model_dir,
+def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
                    config_file="exp/asr_train_asr_raw_hindi_bpe500/config.yaml",
                    model_file="exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth",
                    devices='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, 
@@ -212,3 +212,4 @@ def subtitile_feed(model_dir,
 
     transcription += " "+" ".join(buffer)
     print(transcription)
+    return transcription
