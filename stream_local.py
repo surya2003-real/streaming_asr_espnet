@@ -43,182 +43,168 @@ def transcribe(model,audio):
     nbest = model(audio)
     return nbest[0][0]
 
+
 def reshape(audio_data):
     if len(audio_data.shape)==1:
         audio_data=audio_data.reshape((audio_data.shape[0],1))
     return audio_data
 
-# model options
-config_file = "exp/asr_train_asr_raw_hindi_bpe500/config.yaml"
-model_file = "exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth"
-devices = 'cpu'
+# Main function
+def subtitile_feed(model_dir,config_file="exp/asr_train_asr_raw_hindi_bpe500/config.yaml",model_file="exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth",devices='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, SAMPLE_RATE=16000,CHANNELS=1,CHUNK=1000, vad_on=True):
 
-os.chdir('C:/Users/Sankalp Mittal/Desktop/MadhavLab/streaming-asr-espnet/asr_train_asr_raw_hindi_bpe500')
-# device = 'cuda'
-model = Speech2Text(config_file,model_file,device=devices)
+    os.chdir(model_dir)
+    # device = 'cuda'
+    model = Speech2Text(config_file,model_file,device=devices)
 
-dev_idx, devices = find_mics()
-p = pa.PyAudio()
+    dev_idx, devices = find_mics()
+    p = pa.PyAudio()
 
-CHANNELS = 1
-SAMPLE_RATE = 16000
-CHUNK = 1000
-min_speech_limit = 0.1
-music_tolerance = 0.5
-vad_on = True
+    separate_speech = {}
+    enh_model_sc = SeparateSpeech(
+        train_config="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
+        model_file="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
+        # for segment-wise process on long speech
+        normalize_segment_scale=False,
+        show_progressbar=True,
+        device= devices,
+        ref_channel=1,
+        normalize_output_wav=True,
+    )
+    at = AudioTagging(checkpoint_path=None,device=devices)
 
-separate_speech = {}
-enh_model_sc = SeparateSpeech(
-    train_config="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/config.yaml",
-    model_file="../speech_sc_enhance/enh_model_sc/exp/enh_train_enh_conv_tasnet_raw/5epoch.pth",
-    # for segment-wise process on long speech
-    normalize_segment_scale=False,
-    show_progressbar=True,
-    device= devices,
-    ref_channel=1,
-    normalize_output_wav=True,
-)
-at = AudioTagging(checkpoint_path=None,device=devices)
+    #Variable initializations
+    buffer = []
+    transcription = ""
+    conf_words=[]
+    word_list=[]
 
-#Variable initializations
-buffer = []
-prev_transcript = ""
-transcription = ""
-conf_words=[]
-word_list=[]
+    curr_time = 1
 
-curr_time = 1
+    stream = p.open(format=pa.paInt16,
+                        channels=CHANNELS,
+                        rate=SAMPLE_RATE,
+                        input=True,
+                        input_device_index=dev_idx,
+                        frames_per_buffer=CHUNK
+                        )
 
-stream = p.open(format=pa.paInt16,
-                    channels=CHANNELS,
-                    rate=SAMPLE_RATE,
-                    input=True,
-                    input_device_index=dev_idx,
-                    frames_per_buffer=CHUNK
-                    )
+    print('Listening...')
 
-print('Listening...')
+    stream.start_stream()
 
-stream.start_stream()
-
-frames = []
-further = True
-try:
-    for _ in range(0, int(SAMPLE_RATE / CHUNK * 7)):
-        data = stream.read(CHUNK)
-        frames.append(data)
-except KeyboardInterrupt:
-    further = False
-
-# time.sleep(7)
-audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
-audio_data = pcm2float(audio_data)
-
-# Speech Enhancement
-enhanced = reshape(audio_data)
-mixwav_sc = enhanced[:,0]
-wave = mixwav_sc[None, :]
-at = AudioTagging(checkpoint_path=None, device='cuda')
-(clipwise_output, embedding) = at.inference(wave)
-print(clipwise_output[0][137])
-if clipwise_output[0][0]>min_speech_limit:
-    if clipwise_output[0][137]>=music_tolerance:
-        print('Enhancement Required')
-        wave = enh_model_sc(mixwav_sc[None, ...], 16000)
-audio_data=wave[0].squeeze()
-
-initial_time = time.time()
-txt = transcribe(model,audio_data)
-words = txt.split()
-conf_words += words[:-4]
-buffer += words[-4:]
-curr_time += 1
-transcription += " "+" ".join(conf_words)
-print(curr_time-1, curr_time+6, transcription)
-
-# Keep the program running
-while further:
+    frames = []
+    further = True
     try:
-        new_frames = []
-        # if(1-(time.time()-initial_time)>0):
-        #     time.sleep(1-(time.time()-initial_time))
-        for _ in range(0, int(SAMPLE_RATE / CHUNK * 1)):
+        for _ in range(0, int(SAMPLE_RATE / CHUNK * frame_length)):
             data = stream.read(CHUNK)
             frames.append(data)
-            new_frames.append(data)
-        new_data = np.frombuffer(b''.join(new_frames), dtype=np.int16)
-        new_data = pcm2float(new_data)
-
-        # Speech Enhancement
-        enhanced = reshape(new_data)
-        mixwav_sc = enhanced[:,0]
-        wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
-        at = AudioTagging(checkpoint_path=None, device='cuda')
-        (clipwise_output, embedding) = at.inference(wave)
-        print(clipwise_output[0][137])
-        print(clipwise_output[0][0])
-        if clipwise_output[0][0]>min_speech_limit:
-                if clipwise_output[0][137]>=music_tolerance:
-                    print('Enhancement Required')
-                    wave = enh_model_sc(mixwav_sc[None, ...], 16000)
-        new_data=wave[0].squeeze()
-        
-        # VAD
-        if(vad_on):
-            model_dir = "../FSMN-VAD"
-            vad_model = Fsmn_vad(model_dir,quantize=True)
-            result = vad_model(new_data)
-            result = np.asarray(result, dtype=np.int32)
-            result=result.reshape((result.shape[1],2))
-            df=pd.DataFrame(result, columns=['start', 'end'])
-            # print(df)
-            speech = np.array([])
-            duration=1*1000
-            for _, row in df.iterrows():
-                start_sample = row['start']
-                end_sample = row['end']
-                # print(start_sample, end_sample, duration)
-                if(start_sample<0 and end_sample<0):
-                    continue
-                if(start_sample>duration and end_sample>duration):
-                    break
-                # print("Y")
-                speech = np.concatenate([speech, new_data[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
-            # print(speech)
-            new_data = speech
-
-        audio_data=np.append(audio_data,new_data)
-        # print("audio_data: ", audio_data)
-        transcription_data = audio_data[-SAMPLE_RATE*7:]
-        start_time = time.time()
-        # if a is None:
-        #     print("break here")
-        #     break
-        txt = transcribe(model,transcription_data)
-        print(txt)
-        curr_time += 1
-        word_list = txt.split()
-        # print(word_list)
-        word_list=word_list[:-1]
-        conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
-        if(len(temp)>0):
-            transcription += " "+" ".join(temp)
-        print(curr_time-1, curr_time+6, transcription, time.time()-start_time)
-        prev_audio = audio_data
-        initial_time = time.time()
     except KeyboardInterrupt:
-        break
+        further = False
 
-# Stop stream
-stream.stop_stream()
-stream.close()
+    # time.sleep(7)
+    audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
+    audio_data = pcm2float(audio_data)
 
-# Terminate PyAudio
-p.terminate()
-print("stream stopped")
+    # Speech Enhancement
+    enhanced = reshape(audio_data)
+    mixwav_sc = enhanced[:,0]
+    wave = mixwav_sc[None, :]
+    at = AudioTagging(checkpoint_path=None, device='cuda')
+    (clipwise_output, embedding) = at.inference(wave)
+    print(clipwise_output[0][137])
+    if clipwise_output[0][0]>min_speech_limit:
+        if clipwise_output[0][137]>=music_tolerance:
+            print('Enhancement Required')
+            wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
+    audio_data=wave[0].squeeze()
 
-transcription += " "+" ".join(buffer)
-print(transcription)
 
-# print(audio_data)
+    txt = transcribe(model,audio_data)
+    words = txt.split()
+    conf_words += words[:-4]
+    buffer += words[-4:]
+    curr_time += 1
+    transcription += " "+" ".join(conf_words)
+    print(curr_time-1, curr_time-1+frame_length, transcription)
 
+    # Keep the program running
+    while further:
+        try:
+            new_frames = []
+            # if(1-(time.time()-initial_time)>0):
+            #     time.sleep(1-(time.time()-initial_time))
+            for _ in range(0, int(SAMPLE_RATE / CHUNK * 1)):
+                data = stream.read(CHUNK)
+                frames.append(data)
+                new_frames.append(data)
+            new_data = np.frombuffer(b''.join(new_frames), dtype=np.int16)
+            new_data = pcm2float(new_data)
+
+            # Speech Enhancement
+            enhanced = reshape(new_data)
+            mixwav_sc = enhanced[:,0]
+            wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
+            at = AudioTagging(checkpoint_path=None, device='cuda')
+            (clipwise_output, embedding) = at.inference(wave)
+            print(clipwise_output[0][137])
+            print(clipwise_output[0][0])
+            if clipwise_output[0][0]>min_speech_limit:
+                    if clipwise_output[0][137]>=music_tolerance:
+                        print('Enhancement Required')
+                        wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
+            new_data=wave[0].squeeze()
+            
+            # VAD
+            if(vad_on):
+                model_dir = "../FSMN-VAD"
+                vad_model = Fsmn_vad(model_dir,quantize=True)
+                result = vad_model(new_data)
+                result = np.asarray(result, dtype=np.int32)
+                result=result.reshape((result.shape[1],2))
+                df=pd.DataFrame(result, columns=['start', 'end'])
+                # print(df)
+                speech = np.array([])
+                duration=1*1000
+                for _, row in df.iterrows():
+                    start_sample = row['start']
+                    end_sample = row['end']
+                    # print(start_sample, end_sample, duration)
+                    if(start_sample<0 and end_sample<0):
+                        continue
+                    if(start_sample>duration and end_sample>duration):
+                        break
+                    # print("Y")
+                    speech = np.concatenate([speech, new_data[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
+                # print(speech)
+                new_data = speech
+
+            audio_data=np.append(audio_data,new_data)
+            # print("audio_data: ", audio_data)
+            transcription_data = audio_data[-SAMPLE_RATE*frame_length:]
+            start_time = time.time()
+            # if a is None:
+            #     print("break here")
+            #     break
+            txt = transcribe(model,transcription_data)
+            print(txt)
+            curr_time += 1
+            word_list = txt.split()
+            # print(word_list)
+            word_list=word_list[:-1]
+            conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
+            if(len(temp)>0):
+                transcription += " "+" ".join(temp)
+            print(curr_time-1, curr_time-1+frame_length, transcription, time.time()-start_time)
+        except KeyboardInterrupt:
+            break
+
+    # Stop stream
+    stream.stop_stream()
+    stream.close()
+
+    # Terminate PyAudio
+    p.terminate()
+    print("stream stopped")
+
+    transcription += " "+" ".join(buffer)
+    print(transcription)
