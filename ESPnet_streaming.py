@@ -1,4 +1,5 @@
 import librosa  
+import jiwer
 from functools import lru_cache
 import time
 from espnet2.bin.asr_inference import Speech2Text
@@ -31,7 +32,32 @@ def transcribe(model,audio):
     nbest = model(audio)
     return nbest[0][0]
 
-def generate_transcription(audio_path,config_file,model_file,device='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, SAMPLING_RATE=16000, VAD_on=True,enh_on=True):
+#Funtions for transcript
+def with_transcript(transcript, asr_prediction):
+    hyp = jiwer.ReduceToListOfListOfWords()(transcript)
+    tru = jiwer.ReduceToListOfListOfWords()(asr_prediction)
+    out = jiwer.process_words(asr_prediction, transcript)
+    req = out.alignments[0]
+    rlen = len(tru[0])
+    text_out = []
+    for it in req:
+        diff = it.ref_start_idx-it.hyp_start_idx
+        for ind in range(it.hyp_start_idx, it.hyp_end_idx):
+            text_out.append(hyp[0][ind])
+            if ind+diff >= rlen:
+                break
+            index = ind
+    sentence = ' '.join(text_out)
+    return sentence, index
+
+def live_transcript(transcript, prediction, ref):
+    ind = 21
+    ref = transcript[ref:ref+ind]
+    ref_sen = ' '.join(ref)
+    text, it = with_transcript(ref_sen, prediction)
+    return text
+
+def generate_transcription(audio_path,config_file,model_file,device='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, SAMPLING_RATE=16000, VAD_on=True,enh_on=True,transcript_path = None):
 
     os.chdir('/home/suryansh/MADHAV')
     if(enh_on):
@@ -68,10 +94,10 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
         wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
         at = AudioTagging(checkpoint_path=None, device=device)
         (clipwise_output, embedding) = at.inference(wave)
-        print(clipwise_output[0][137])
+        # print(clipwise_output[0][137])
         if clipwise_output[0][0]>min_speech_limit:
             if clipwise_output[0][137]>=music_tolerance:
-                print('Enhancement Required')
+                # print('Enhancement Required')
                 wave = enh_model_sc(mixwav_sc[None, ...], SAMPLING_RATE)
         a=wave[0].squeeze()
         txt = transcribe(speech2text,a)
@@ -85,14 +111,20 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
         wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
         at = AudioTagging(checkpoint_path=None, device=device)
         (clipwise_output, embedding) = at.inference(wave)
-        print(clipwise_output[0][137])
-        print(clipwise_output[0][0])
+        # print(clipwise_output[0][137])
+        # print(clipwise_output[0][0])
         if clipwise_output[0][0]>min_speech_limit:
                 if clipwise_output[0][137]>=music_tolerance:
-                    print('Enhancement Required')
+                    # print('Enhancement Required')
                     wave = enh_model_sc(mixwav_sc[None, ...], SAMPLING_RATE)
         a=wave[0].squeeze()
     txt = transcribe(speech2text,a)
+    if not transcript_path is None:
+        ref = 0
+        with open(transcript_path, 'r' ) as file:
+            trans = file.read()
+        transcript = jiwer.ReduceToListOfListOfWords()(trans)[0]
+        txt = live_transcript(transcript,txt,ref)
     words = txt.split()
     conf_words += words[:-4]
     buffer += words[-4:]
@@ -100,7 +132,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
     transcription += " "+" ".join(conf_words)
     # curr_time = 1
     print(curr_time-1, min(curr_time+frame_length-1, audio_duration), transcription)
-    print("breakdown",conf_words, buffer)
+    # print("breakdown",conf_words, buffer)
     speech = np.array([])
     while curr_time+frame_length<audio_duration:
         print(audio_duration, curr_time, curr_time+frame_length)
@@ -111,11 +143,11 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
             wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
             at = AudioTagging(checkpoint_path=None, device=device)
             (clipwise_output, embedding) = at.inference(wave)
-            print(clipwise_output[0][137])
-            print(clipwise_output[0][0])
+            # print(clipwise_output[0][137])
+            # print(clipwise_output[0][0])
             if clipwise_output[0][0]>min_speech_limit:
                 if clipwise_output[0][137]>=music_tolerance:
-                    print('Enhancement Required')
+                    # print('Enhancement Required')
                     wave = enh_model_sc(mixwav_sc[None, ...], SAMPLING_RATE)
             a=wave[0].squeeze()
         if(VAD_on):
@@ -125,7 +157,7 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
             result = np.asarray(result, dtype=np.int32)
             result=result.reshape((result.shape[1],2))
             df=pd.DataFrame(result, columns=['start', 'end'])
-            print(df)
+            # print(df)
             speech = np.array([])
             duration=7*1000
             for _, row in df.iterrows():
@@ -138,10 +170,12 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
                     break
         #         print("Y")
                 speech = np.concatenate([speech, a[int(max(0,start_sample))*16:int(min(duration, end_sample))*16]])
-            print(len(speech))
+            # print(len(speech))
             if(len(speech)>4000):
                 txt = transcribe(speech2text,speech)
-                print(txt)
+                if not transcript_path is None:
+                    txt = live_transcript(transcript,txt,ref)
+                # print(txt)
                 word_list = txt.split()
                 print(word_list)
                 # word_list=word_list[:-1]
@@ -155,10 +189,12 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
                     transcription += " "+" ".join(temp)
             curr_time += 1
             print(curr_time-1, min(curr_time-1+frame_length, audio_duration), transcription, time.time()-start_time)
-            print("breakdown",conf_words, buffer)
+            # print("breakdown",conf_words, buffer)
         else:
             txt = transcribe(speech2text,a)
-            print(txt)
+            if not transcript_path is None:
+                txt = live_transcript(transcript,txt,ref)
+            # print(txt)
             curr_time += 1
             word_list = txt.split()
             print(word_list)
@@ -167,11 +203,11 @@ def generate_transcription(audio_path,config_file,model_file,device='cuda', min_
             if(len(temp)>0):
                 transcription += " "+" ".join(temp)
             print(curr_time-1, min(curr_time-1+frame_length, audio_duration), transcription, time.time()-start_time)
-            print("breakdown",conf_words, buffer)
+            # print("breakdown",conf_words, buffer)
         second_count+=1
         delay = second_count - (time.time() - initial_time)
         if delay > 0:
             time.sleep(delay)
-        print(second_count)
+        # print(second_count)
     transcription += " "+" ".join(buffer)
     return transcription

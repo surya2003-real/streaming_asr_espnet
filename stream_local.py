@@ -1,6 +1,7 @@
 from find_microphones import find_mics
 import pyaudio as pa
 import pandas as pd
+import jiwer
 from funasr_onnx import Fsmn_vad
 from panns_inference import AudioTagging
 from new_conf_words import new_conf_words
@@ -46,12 +47,38 @@ def reshape(audio_data):
         audio_data=audio_data.reshape((audio_data.shape[0],1))
     return audio_data
 
+#Funtions for transcript
+def with_transcript(transcript, asr_prediction):
+    hyp = jiwer.ReduceToListOfListOfWords()(transcript)
+    tru = jiwer.ReduceToListOfListOfWords()(asr_prediction)
+    out = jiwer.process_words(asr_prediction, transcript)
+    req = out.alignments[0]
+    rlen = len(tru[0])
+    text_out = []
+    for it in req:
+        diff = it.ref_start_idx-it.hyp_start_idx
+        for ind in range(it.hyp_start_idx, it.hyp_end_idx):
+            text_out.append(hyp[0][ind])
+            if ind+diff >= rlen:
+                break
+            index = ind
+    sentence = ' '.join(text_out)
+    return sentence, index
+
+def live_transcript(transcript, prediction, ref):
+    ind = 21
+    ref = transcript[ref:ref+ind]
+    ref_sen = ' '.join(ref)
+    text, it = with_transcript(ref_sen, prediction)
+    return text
+
 # Main function
 def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
                    config_file="exp/asr_train_asr_raw_hindi_bpe500/config.yaml",
                    model_file="exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth",
                    devices='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, 
-                   SAMPLE_RATE=16000,CHANNELS=1,CHUNK=1000, vad_on=True,enh_on=True):
+                   SAMPLE_RATE=16000,CHANNELS=1,CHUNK=1000, vad_on=True,enh_on=True,
+                   transcript_path = None):
 
     os.chdir(model_dir)
     model = Speech2Text(config_file,model_file,device=devices)
@@ -122,6 +149,15 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
 
 
     txt = transcribe(model,audio_data)
+
+    # when transcript is available
+    if not transcript_path is None:
+        ref = 0
+        with open(transcript_path, 'r' ) as file:
+            trans = file.read()
+        transcript = jiwer.ReduceToListOfListOfWords()(trans)[0]
+        txt = live_transcript(transcript,txt,ref)
+
     words = txt.split()
     conf_words += words[:-4]
     buffer += words[-4:]
@@ -184,11 +220,17 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
             audio_data=np.append(audio_data,new_data)
             # print("audio_data: ", audio_data)
             transcription_data = audio_data[-SAMPLE_RATE*frame_length:]
+
             start_time = time.time()
             # if a is None:
             #     print("break here")
             #     break
             txt = transcribe(model,transcription_data)
+
+            # with transcript
+            if not transcript_path is None:
+                txt = live_transcript(transcript,txt,ref)
+            
             print(txt)
             curr_time += 1
             word_list = txt.split()
