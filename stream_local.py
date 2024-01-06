@@ -10,6 +10,24 @@ import os
 import time
 from espnet2.bin.asr_inference import Speech2Text
 from espnet2.bin.enh_inference import SeparateSpeech
+import contextlib
+from io import StringIO
+import sys
+
+@contextlib.contextmanager
+def suppress_output():
+    # Create a dummy output collector
+    dummy_stdout = StringIO()
+
+    # Redirect stdout to the dummy collector
+    original_stdout = sys.stdout
+    sys.stdout = dummy_stdout
+
+    try:
+        yield dummy_stdout
+    finally:
+        # Reset stdout to its original state
+        sys.stdout = original_stdout
 
 def pcm2float(sig, dtype='float32'):
     """Convert PCM signal to floating point with a range from -1 to 1.
@@ -73,7 +91,7 @@ def live_transcript(transcript, prediction, ref):
     return text
 
 # Main function
-def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
+def subtitle_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
                    config_file="exp/asr_train_asr_raw_hindi_bpe500/config.yaml",
                    model_file="exp/asr_train_asr_raw_hindi_bpe500/valid.acc.ave_10best.pth",
                    devices='cuda', min_speech_limit=0.1, music_tolerance=0.5, frame_length=7, 
@@ -82,8 +100,7 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
 
     os.chdir(model_dir)
     model = Speech2Text(config_file,model_file,device=devices)
-
-    dev_idx, devices = find_mics()
+    dev_idx, devices = 12, 'cuda'
     p = pa.PyAudio()
 
     if(enh_on):
@@ -98,7 +115,7 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
             ref_channel=1,
             normalize_output_wav=True,
         )
-        at = AudioTagging(checkpoint_path=None,device=devices)
+    at = AudioTagging(checkpoint_path=None,device=devices)
 
     #Variable initializations
     buffer = []
@@ -138,12 +155,12 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
         enhanced = reshape(audio_data)
         mixwav_sc = enhanced[:,0]
         wave = mixwav_sc[None, :]
-        at = AudioTagging(checkpoint_path=None, device=devices)
-        (clipwise_output, embedding) = at.inference(wave)
-        print(clipwise_output[0][137])
+        with suppress_output() as output_collector:
+            (clipwise_output, embedding) = at.inference(wave)
+        # print(clipwise_output[0][137])
         if clipwise_output[0][0]>min_speech_limit:
             if clipwise_output[0][137]>=music_tolerance:
-                print('Enhancement Required')
+                # print('Enhancement Required')
                 wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
         audio_data=wave[0].squeeze()
 
@@ -163,7 +180,8 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
     buffer += words[-4:]
     curr_time += 1
     transcription += " "+" ".join(conf_words)
-    print(curr_time-1, curr_time-1+frame_length, transcription)
+    print(" "+" ".join(conf_words), end="")
+    # print(curr_time-1, curr_time-1+frame_length, transcription)
 
     # Keep the program running
     while further:
@@ -183,13 +201,13 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
                 enhanced = reshape(new_data)
                 mixwav_sc = enhanced[:,0]
                 wave = mixwav_sc[None, :]  # (batch_size, segment_samples)
-                at = AudioTagging(checkpoint_path=None, device=devices)
-                (clipwise_output, embedding) = at.inference(wave)
-                print(clipwise_output[0][137])
-                print(clipwise_output[0][0])
+                with suppress_output() as output_collector:
+                    (clipwise_output, embedding) = at.inference(wave)
+                # print(clipwise_output[0][137])
+                # print(clipwise_output[0][0])
                 if clipwise_output[0][0]>min_speech_limit:
                         if clipwise_output[0][137]>=music_tolerance:
-                            print('Enhancement Required')
+                            # print('Enhancement Required')
                             wave = enh_model_sc(mixwav_sc[None, ...], SAMPLE_RATE)
                 new_data=wave[0].squeeze()
             
@@ -231,7 +249,7 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
             if not transcript_path is None:
                 txt = live_transcript(transcript,txt,ref)
             
-            print(txt)
+            # print(txt)
             curr_time += 1
             word_list = txt.split()
             # print(word_list)
@@ -239,7 +257,8 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
             conf_words,buffer,temp = new_conf_words(buffer,word_list,conf_words)
             if(len(temp)>0):
                 transcription += " "+" ".join(temp)
-            print(curr_time-1, curr_time-1+frame_length, transcription, time.time()-start_time)
+                print(" "+" ".join(temp), end="")
+            # print(curr_time-1, curr_time-1+frame_length, transcription, time.time()-start_time)
         except KeyboardInterrupt:
             break
 
@@ -252,6 +271,6 @@ def subtitile_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
     print("stream stopped")
 
     transcription += " "+" ".join(buffer)
-    print(transcription)
+    # print(transcription)
     os.chdir("..")
     return transcription

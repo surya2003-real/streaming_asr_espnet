@@ -1,7 +1,7 @@
 def conf_word_check(conf_words, word_list):
-    print(len(conf_words), len(word_list))
+    # print(len(conf_words), len(word_list))
     conf_word= conf_words[-1]
-    print(conf_word)
+    # print(conf_word)
     for l in range(len(conf_words)):
         for i in range(len(word_list)-1,0,-1):
             if(conf_word==word_list[i]):
