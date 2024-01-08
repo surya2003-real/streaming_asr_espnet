@@ -14,17 +14,17 @@ from funasr_onnx import Fsmn_vad
 from panns_inference import AudioTagging
 # Function to load audio file
 @lru_cache
-def load_audio(fname, SAMPLE_RATE):
-    a, _ = librosa.load(fname, sr=SAMPLE_RATE)
+def load_audio(fname, SAMPLING_RATE=16000):
+    a, _ = librosa.load(fname, sr=SAMPLING_RATE)
     if len(a.shape)==1:
         a=a.reshape((a.shape[0],1))
     return a
 
 # Function to load an audio chunk from the larger file
-def load_audio_chunk(fname, beg, end,SAMPLE_RATE):
-    audio = load_audio(fname,SAMPLE_RATE)
-    beg_s = int(beg*SAMPLE_RATE)
-    end_s = int(end*SAMPLE_RATE)
+def load_audio_chunk(fname, beg, end,SAMPLING_RATE=16000):
+    audio = load_audio(fname,SAMPLING_RATE)
+    beg_s = int(beg*SAMPLING_RATE)
+    end_s = int(end*SAMPLING_RATE)
     return audio[beg_s:end_s, :]
 
 # Function to transcribe audio chunk
