@@ -16,7 +16,7 @@ def find_mics():
             print('Please type input device ID:')
             dev_idx = int(input())
     
-    print(input_devices)
-    return dev_idx,input_devices
+    # print(input_devices)
+    return dev_idx
 
 # find_mics()

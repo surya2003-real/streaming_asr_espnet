@@ -100,7 +100,7 @@ def subtitle_feed(model_dir="asr_train_asr_raw_hindi_bpe500",
 
     os.chdir(model_dir)
     model = Speech2Text(config_file,model_file,device=devices)
-    dev_idx, devices = 12, 'cuda'
+    dev_idx = find_mics()
     p = pa.PyAudio()
 
     if(enh_on):
